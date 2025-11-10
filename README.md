@@ -38,9 +38,8 @@ A lightweight Julia package to generate **random k‑SAT** formulas (uniform mod
 julia> ] add https://github.com/MohHizzani/KSATGenerators.jl
 ```
 
-> If you created this package with PkgTemplates, your repo is already set up for standard Julia workflows (git, CI scaffolding, etc.).
 
----
+--
 
 ## Quick start
 
