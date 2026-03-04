@@ -12,6 +12,7 @@ A lightweight Julia package to generate **random k‑SAT** formulas (uniform mod
 * **Scale‑free k‑SAT** using Zipf‑like weights (p(i) \propto i^{-\beta}) for variable selection (captures industrial skew).
 * **No duplicate variables within a clause** by construction; random literal polarity with (\Pr(\neg)=\Pr(\text{pos})=1/2).
 * **Optional uniqueness**: `unique_clauses=true` rejects duplicate clauses.
+* **Optional planted assignment**: `planted_solution=...` enforces guaranteed satisfiability.
 * **Write DIMACS CNF** directly to disk.
 * **Reproducible** via `rng = MersenneTwister(seed)`.
 
@@ -67,6 +68,10 @@ F_uniform = KSATGenerators.gen_uniform_kSAT(n, k, α; rng, unique_clauses=true)
 β = 0.6                # larger β ⇒ stronger power-law skew in variable use
 F_sf = KSATGenerators.gen_scalefree_kSAT(n, k, α; β, rng, unique_clauses=true)
 
+# 3) Planted-solution instance (guaranteed satisfiable by `σ`)
+σ = rand(rng, Bool, n)
+F_planted = KSATGenerators.gen_uniform_kSAT(n, k, α; rng, planted_solution=σ)
+
 # Write DIMACS CNF files
 KSATGenerators.write_dimacs("k4_uniform.cnf", F_uniform)
 KSATGenerators.write_dimacs("k4_scalefree_beta0p6.cnf", F_sf)
@@ -119,12 +124,14 @@ Set `unique_clauses=true` in either generator to **reject duplicate clauses** (c
 ```julia
 gen_uniform_kSAT(n::Int, k::Int, α::Real;
                  rng=Random.default_rng(),
-                 unique_clauses::Bool=false) -> CNF
+                 unique_clauses::Bool=false,
+                 planted_solution=nothing) -> CNF
 
 gen_scalefree_kSAT(n::Int, k::Int, α::Real;
                    β::Real=0.5,
                    rng=Random.default_rng(),
-                   unique_clauses::Bool=false) -> CNF
+                   unique_clauses::Bool=false,
+                   planted_solution=nothing) -> CNF
 
 write_dimacs(io::IO, F::CNF)
 write_dimacs(path::AbstractString, F::CNF)
@@ -156,7 +163,7 @@ For uniform random k‑SAT, the peak hardness typically occurs near the satisfia
 * **Speed**: generation is (O(mk)). The uniqueness option adds a hash‑set membership check per clause; for typical sizes and densities the overhead is small.
 * **Memory**: uniqueness keeps a `Set` of canonicalized clauses; budget roughly `O(mk)` integers.
 * **Reproducibility**: always pass an explicit RNG (e.g., `MersenneTwister(seed)`). Consider writing out a CSV manifest with `(n, k, α, β, seed, path)` for your benchmarks.
-* **Planted solutions** (TODO): if you need guaranteed satisfiable instances, a planted model can be added; open an issue if you want this feature.
+* **Planted model**: pass `planted_solution` as a `Bool` vector of length `n`; each clause is sampled until satisfied by that assignment.
 
 ---
 

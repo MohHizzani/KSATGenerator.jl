@@ -12,6 +12,8 @@ struct CNF
     clauses::Vector{Clause}
 end
 
+random_assignment(n::Int; rng=Random.default_rng()) = rand(rng, Bool, n)
+
 function write_dimacs(io::IO, F::CNF)
     println(io, "p cnf $(F.nvars) $(length(F.clauses))")
     for c in F.clauses
@@ -27,15 +29,50 @@ function _canon_key!(lits::Vector{Int})
     return join(lits, ',')  # string key works well with Set{String}
 end
 
+function _validate_planted_solution(planted_solution, n::Int)
+    if planted_solution === nothing
+        return nothing
+    end
+    @assert length(planted_solution) == n "planted_solution length must equal n"
+    return Bool.(planted_solution)
+end
+
+@inline function _lit_satisfied_by_planted_solution(lit::Int, planted_solution::AbstractVector{Bool})
+    val = planted_solution[abs(lit)]
+    return lit > 0 ? val : !val
+end
+
+function _sample_lits_uniform!(buf::Vector{Int}, vars, rng, planted_solution)
+    while true
+        @inbounds for t in eachindex(buf)
+            v = vars[t]
+            buf[t] = rand(rng, Bool) ? v : -v
+        end
+        planted_solution === nothing && return
+        @inbounds for lit in buf
+            _lit_satisfied_by_planted_solution(lit, planted_solution) && return
+        end
+    end
+end
+
 """
-    gen_uniform_kSAT(n::Int, k::Int, α::Real; rng=Random.default_rng(), unique_clauses::Bool=false)
+    gen_uniform_kSAT(n::Int, k::Int, α::Real;
+                     rng=Random.default_rng(),
+                     unique_clauses::Bool=false,
+                     planted_solution=nothing)
 
 Uniform random k-SAT: each clause picks k distinct variables uniformly; signs are ± with p=0.5.
 If `unique_clauses=true`, reject and resample any clause that duplicates a previous one.
+If `planted_solution` is provided (Bool vector of length `n`), every clause is sampled until
+it is satisfied by that assignment.
 """
-function gen_uniform_kSAT(n::Int, k::Int, α::Real; rng=Random.default_rng(), unique_clauses::Bool=false)
+function gen_uniform_kSAT(n::Int, k::Int, α::Real;
+                          rng=Random.default_rng(),
+                          unique_clauses::Bool=false,
+                          planted_solution=nothing)
     @assert 1 ≤ k ≤ n "k must be in [1,n]"
     m = Int(round(α*n))
+    planted = _validate_planted_solution(planted_solution, n)
     clauses = Vector{Clause}()
     sizehint!(clauses, m)
 
@@ -44,10 +81,7 @@ function gen_uniform_kSAT(n::Int, k::Int, α::Real; rng=Random.default_rng(), un
 
     while length(clauses) < m
         vars = sample(rng, 1:n, k; replace=false)      # no duplicate variables in a clause
-        @inbounds for t in 1:k
-            v = vars[t]
-            buf[t] = rand(rng, Bool) ?  v : -v
-        end
+        _sample_lits_uniform!(buf, vars, rng, planted)
         if unique_clauses
             key = _canon_key!(buf)
             if !(key in seen)
@@ -62,16 +96,27 @@ function gen_uniform_kSAT(n::Int, k::Int, α::Real; rng=Random.default_rng(), un
 end
 
 """
-    gen_scalefree_kSAT(n::Int, k::Int, α::Real; β::Real=0.5, rng=Random.default_rng(), unique_clauses::Bool=false)
+    gen_scalefree_kSAT(n::Int, k::Int, α::Real;
+                       β::Real=0.5,
+                       rng=Random.default_rng(),
+                       unique_clauses::Bool=false,
+                       planted_solution=nothing)
 
 Scale-free k-SAT: variable i is chosen with probability ∝ i^{-β} (Zipf-like),
 k distinct vars per clause; signs are ± with p=0.5. If `unique_clauses=true`,
-duplicates are rejected and resampled.
+duplicates are rejected and resampled. If `planted_solution` is provided
+(Bool vector of length `n`), every clause is sampled until it is satisfied by
+that assignment.
 """
-function gen_scalefree_kSAT(n::Int, k::Int, α::Real; β::Real=0.5, rng=Random.default_rng(), unique_clauses::Bool=false)
+function gen_scalefree_kSAT(n::Int, k::Int, α::Real;
+                            β::Real=0.5,
+                            rng=Random.default_rng(),
+                            unique_clauses::Bool=false,
+                            planted_solution=nothing)
     @assert 0 < β ≤ 1 "β should be in (0,1]"
     @assert 1 ≤ k ≤ n
     m = Int(round(α*n))
+    planted = _validate_planted_solution(planted_solution, n)
 
     w = (1:n) .^ (-β)
     W = Weights(w)
@@ -84,10 +129,7 @@ function gen_scalefree_kSAT(n::Int, k::Int, α::Real; β::Real=0.5, rng=Random.d
 
     while length(clauses) < m
         vars = sample(rng, 1:n, W, k; replace=false)
-        @inbounds for t in 1:k
-            v = vars[t]
-            buf[t] = rand(rng, Bool) ?  v : -v
-        end
+        _sample_lits_uniform!(buf, vars, rng, planted)
         if unique_clauses
             key = _canon_key!(buf)
             if !(key in seen)
