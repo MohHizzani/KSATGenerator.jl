@@ -1,6 +1,7 @@
 # KSATGenerators
 
-[![Build Status](https://github.com/MohHizzani/KSATGenerators.jl/actions/workflows/CI.yml/badge.svg?branch=main)](https://github.com/MohHizzani/KSATGenerators.jl/actions/workflows/CI.yml?query=branch%3Amain)
+[![Build Status](https://github.com/MohHizzani/KSATGenerators.jl/actions/workflows/CI.yml/badge.svg)](https://github.com/MohHizzani/KSATGenerators.jl/actions/workflows/CI.yml)
+[![codecov](https://codecov.io/gh/MohHizzani/KSATGenerators.jl/branch/main/graph/badge.svg?token=KSATGEN)](https://codecov.io/gh/MohHizzani/KSATGenerators.jl)
 
 A lightweight Julia package to generate **random k‑SAT** formulas (uniform model) and **scale‑free ("industrial‑like") k‑SAT** where variable occurrences follow a power‑law distribution. It produces in‑memory CNF objects and **DIMACS CNF** files compatible with mainstream SAT solvers.
 
