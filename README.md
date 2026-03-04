@@ -8,9 +8,9 @@ A lightweight Julia package to generate **random k‑SAT** formulas (uniform mod
 
 ## Features
 
-* **Uniform random k‑SAT** at a chosen clause density (\alpha = m/n).
-* **Scale‑free k‑SAT** using Zipf‑like weights (p(i) \propto i^{-\beta}) for variable selection (captures industrial skew).
-* **No duplicate variables within a clause** by construction; random literal polarity with (\Pr(\neg)=\Pr(\text{pos})=1/2).
+* **Uniform random k‑SAT** at a chosen clause density `α = m/n`.
+* **Scale‑free k‑SAT** using Zipf‑like weights `p(i) ∝ i^(-β)` for variable selection (captures industrial skew).
+* **No duplicate variables within a clause** by construction; random literal polarity with `P(neg)=P(pos)=1/2`.
 * **Optional uniqueness**: `unique_clauses=true` rejects duplicate clauses.
 * **Optional planted assignment**: `planted_solution=...` enforces guaranteed satisfiability.
 * **Write DIMACS CNF** directly to disk.
@@ -110,7 +110,7 @@ end
 
 ### Scale‑free ("industrial‑like") k‑SAT
 
-* Each clause samples **k distinct variables with weights** (w_i \propto i^{-\beta}), (i=1..n).
+* Each clause samples **k distinct variables with weights** `w_i ∝ i^(-β)` for `i = 1..n`.
 * This yields a **power‑law degree distribution** of variable occurrences, a hallmark of many industrial SAT families.
 * Typical `β` in practice: `0.3` – `0.9` (larger ⇒ heavier tail).
 
@@ -154,7 +154,7 @@ end
 
 ## Choosing α (clause/variable ratio)
 
-For uniform random k‑SAT, the peak hardness typically occurs near the satisfiability threshold (\alpha_c(k)). For example, for `k=4`, many studies explore (\alpha\approx 9.9). For finite `n`, use a **small sweep around** (\alpha_c) (e.g., ±0.2–0.5) to capture the hard region. In scale‑free models, the effective threshold shifts with `β`; consider exploring a grid `(α, β)` if your goal is hardness.
+For uniform random k‑SAT, the peak hardness typically occurs near the satisfiability threshold `α_c(k)`. For example, for `k=4`, many studies explore `α ≈ 9.9`. For finite `n`, use a **small sweep around** `α_c` (e.g., ±0.2–0.5) to capture the hard region. In scale‑free models, the effective threshold shifts with `β`; consider exploring a grid `(α, β)` if your goal is hardness.
 
 ---
 
