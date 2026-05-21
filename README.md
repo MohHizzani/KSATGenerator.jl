@@ -10,7 +10,7 @@ A lightweight Julia package to generate **random k‑SAT** formulas (uniform mod
 ## Features
 
 * **Uniform random k‑SAT** at a chosen clause density `α = m/n`.
-* **Scale‑free k‑SAT** using Zipf‑like weights `p(i) ∝ i^(-β)` for variable selection (captures industrial skew).
+* **Scale‑free k‑SAT** using the power-law exponent convention from Power-Law-Random-SAT-Generator: `p(i) ∝ (n / i)^(1 / (β - 1))`, with `β > 1`.
 * **No duplicate variables within a clause** by construction; random literal polarity with `P(neg)=P(pos)=1/2`.
 * **Optional uniqueness**: `unique_clauses=true` rejects duplicate clauses.
 * **Optional planted assignment**: `planted_solution=...` enforces guaranteed satisfiability.
@@ -66,7 +66,7 @@ rng = MersenneTwister(42)
 F_uniform = KSATGenerators.gen_uniform_kSAT(n, k, α; rng, unique_clauses=true)
 
 # 2) Scale-free ("industrial-like") k-SAT
-β = 0.6                # larger β ⇒ stronger power-law skew in variable use
+β = 2.5                # matches the original generator's -p exponent convention
 F_sf = KSATGenerators.gen_scalefree_kSAT(n, k, α; β, rng, unique_clauses=true)
 
 # 3) Planted-solution instance (guaranteed satisfiable by `σ`)
@@ -75,7 +75,7 @@ F_planted = KSATGenerators.gen_uniform_kSAT(n, k, α; rng, planted_solution=σ)
 
 # Write DIMACS CNF files
 KSATGenerators.write_dimacs("k4_uniform.cnf", F_uniform)
-KSATGenerators.write_dimacs("k4_scalefree_beta0p6.cnf", F_sf)
+KSATGenerators.write_dimacs("k4_scalefree_beta2p5.cnf", F_sf)
 ```
 
 ---
@@ -85,7 +85,7 @@ KSATGenerators.write_dimacs("k4_scalefree_beta0p6.cnf", F_sf)
 ```julia
 using KSATGenerators, Random, Printf
 
-n, k, β = 1000, 4, 0.6
+n, k, β = 1000, 4, 2.5
 alphas  = [9.6, 9.8, 10.0]      # sweep around a hard region for k=4
 seeds   = 1:5
 
@@ -111,9 +111,9 @@ end
 
 ### Scale‑free ("industrial‑like") k‑SAT
 
-* Each clause samples **k distinct variables with weights** `w_i ∝ i^(-β)` for `i = 1..n`.
-* This yields a **power‑law degree distribution** of variable occurrences, a hallmark of many industrial SAT families.
-* Typical `β` in practice: `0.3` – `0.9` (larger ⇒ heavier tail).
+* Each clause samples **k distinct variables with weights** `w_i ∝ (n / i)^(1 / (β - 1))` for `i = 1..n`.
+* This matches the variable-weight convention used by Power-Law-Random-SAT-Generator's `-p` option.
+* Typical `β` values are greater than 1; for example, the original generator defaults to `2.75` and its README example uses `2.5`.
 
 **Clause uniqueness option**
 Set `unique_clauses=true` in either generator to **reject duplicate clauses** (canonicalized by absolute variable index and sign order). This slightly conditions the i.i.d. model but keeps datasets tidy.
@@ -129,7 +129,7 @@ gen_uniform_kSAT(n::Int, k::Int, α::Real;
                  planted_solution=nothing) -> CNF
 
 gen_scalefree_kSAT(n::Int, k::Int, α::Real;
-                   β::Real=0.5,
+                   β::Real=2.75,
                    rng=Random.default_rng(),
                    unique_clauses::Bool=false,
                    planted_solution=nothing) -> CNF

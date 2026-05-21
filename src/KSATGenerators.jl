@@ -97,28 +97,29 @@ end
 
 """
     gen_scalefree_kSAT(n::Int, k::Int, α::Real;
-                       β::Real=0.5,
+                       β::Real=2.75,
                        rng=Random.default_rng(),
                        unique_clauses::Bool=false,
                        planted_solution=nothing)
 
-Scale-free k-SAT: variable i is chosen with probability ∝ i^{-β} (Zipf-like),
-k distinct vars per clause; signs are ± with p=0.5. If `unique_clauses=true`,
-duplicates are rejected and resampled. If `planted_solution` is provided
-(Bool vector of length `n`), every clause is sampled until it is satisfied by
-that assignment.
+Scale-free k-SAT using the power-law exponent convention from
+Power-Law-Random-SAT-Generator: variable i is chosen with probability
+∝ (n / i)^(1 / (β - 1)), with β > 1. Each clause has k distinct variables;
+signs are ± with p=0.5. If `unique_clauses=true`, duplicates are rejected and
+resampled. If `planted_solution` is provided (Bool vector of length `n`),
+every clause is sampled until it is satisfied by that assignment.
 """
 function gen_scalefree_kSAT(n::Int, k::Int, α::Real;
-                            β::Real=0.5,
+                            β::Real=2.75,
                             rng=Random.default_rng(),
                             unique_clauses::Bool=false,
                             planted_solution=nothing)
-    @assert 0 < β ≤ 1 "β should be in (0,1]"
+    @assert β > 1 "β must be greater than 1"
     @assert 1 ≤ k ≤ n
     m = Int(round(α*n))
     planted = _validate_planted_solution(planted_solution, n)
 
-    w = (1:n) .^ (-β)
+    w = _powerlaw_variable_weights(n, β)
     W = Weights(w)
 
     clauses = Vector{Clause}()
@@ -141,6 +142,11 @@ function gen_scalefree_kSAT(n::Int, k::Int, α::Real;
         end
     end
     return CNF(n, clauses)
+end
+
+function _powerlaw_variable_weights(n::Int, β::Real)
+    exponent = inv(β - 1)
+    return (n ./ (1:n)) .^ exponent
 end
 
 end # module

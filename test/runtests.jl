@@ -28,10 +28,21 @@ using Random
         n, k, α = 50, 4, 6.0
         planted = rand(rng, Bool, n)
 
-        F = KSATGenerators.gen_scalefree_kSAT(n, k, α; β=0.7, rng, planted_solution=planted)
+        F = KSATGenerators.gen_scalefree_kSAT(n, k, α; β=2.5, rng, planted_solution=planted)
         @test F.nvars == n
         @test length(F.clauses) == Int(round(α * n))
         @test all(c -> clause_satisfied(c, planted), F.clauses)
+    end
+
+    @testset "power-law exponent convention" begin
+        n = 10
+        β = 2.5
+        weights = KSATGenerators._powerlaw_variable_weights(n, β)
+
+        @test weights[1] == n^(1 / (β - 1))
+        @test weights[end] == 1.0
+        @test issorted(weights; rev=true)
+        @test_throws AssertionError KSATGenerators.gen_scalefree_kSAT(10, 3, 2.0; β=1.0)
     end
 
     @testset "planted solution validation" begin
