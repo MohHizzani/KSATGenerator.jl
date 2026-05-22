@@ -14,6 +14,7 @@ A lightweight Julia package to generate **random k‑SAT** formulas (uniform mod
 * **No duplicate variables within a clause** by construction; random literal polarity with `P(neg)=P(pos)=1/2`.
 * **Optional uniqueness**: `unique_clauses=true` rejects duplicate clauses.
 * **Optional planted assignment**: `planted_solution=...` enforces guaranteed satisfiability.
+* **Optional planting control**: `planting_fraction`, `balance_signs`, and parity constraints can be used to shape instance difficulty.
 * **Write DIMACS CNF** directly to disk.
 * **Reproducible** via `rng = MersenneTwister(seed)`.
 
@@ -73,9 +74,23 @@ F_sf = KSATGenerators.gen_scalefree_kSAT(n, k, α; β, rng, unique_clauses=true)
 σ = rand(rng, Bool, n)
 F_planted = KSATGenerators.gen_uniform_kSAT(n, k, α; rng, planted_solution=σ)
 
+# 4) Harder planted instances: mix planted/random clauses, balance signs,
+#    and add a small amount of parity structure
+F_harder = KSATGenerators.gen_uniform_kSAT(
+    n, k, α;
+    rng,
+    planted_solution=σ,
+    planting_fraction=0.8,
+    balance_signs=true,
+    parity_fraction=0.05,
+    parity_k=3,
+    parity_consistent_with_planted=true,
+)
+
 # Write DIMACS CNF files
 KSATGenerators.write_dimacs("k4_uniform.cnf", F_uniform)
 KSATGenerators.write_dimacs("k4_scalefree_beta2p5.cnf", F_sf)
+KSATGenerators.write_dimacs("k4_harder_planted.cnf", F_harder)
 ```
 
 ---
@@ -126,13 +141,23 @@ Set `unique_clauses=true` in either generator to **reject duplicate clauses** (c
 gen_uniform_kSAT(n::Int, k::Int, α::Real;
                  rng=Random.default_rng(),
                  unique_clauses::Bool=false,
-                 planted_solution=nothing) -> CNF
+                                 planted_solution=nothing,
+                                 planting_fraction::Real=1.0,
+                                 balance_signs::Bool=false,
+                                 parity_fraction::Real=0.0,
+                                 parity_k::Int=3,
+                                 parity_consistent_with_planted::Bool=true) -> CNF
 
 gen_scalefree_kSAT(n::Int, k::Int, α::Real;
                    β::Real=2.75,
                    rng=Random.default_rng(),
                    unique_clauses::Bool=false,
-                   planted_solution=nothing) -> CNF
+                                     planted_solution=nothing,
+                                     planting_fraction::Real=1.0,
+                                     balance_signs::Bool=false,
+                                     parity_fraction::Real=0.0,
+                                     parity_k::Int=3,
+                                     parity_consistent_with_planted::Bool=true) -> CNF
 
 write_dimacs(io::IO, F::CNF)
 write_dimacs(path::AbstractString, F::CNF)
@@ -165,6 +190,9 @@ For uniform random k‑SAT, the peak hardness typically occurs near the satisfia
 * **Memory**: uniqueness keeps a `Set` of canonicalized clauses; budget roughly `O(mk)` integers.
 * **Reproducibility**: always pass an explicit RNG (e.g., `MersenneTwister(seed)`). Consider writing out a CSV manifest with `(n, k, α, β, seed, path)` for your benchmarks.
 * **Planted model**: pass `planted_solution` as a `Bool` vector of length `n`; each clause is sampled until satisfied by that assignment.
+* **Planting fraction**: set `planting_fraction < 1` to mix planted and unplanted clauses. This can make instances harder, but it no longer guarantees satisfiability unless the unplanted clauses are also conditioned or you reject unsat samples.
+* **Sign balancing**: set `balance_signs=true` to reduce simple positive/negative literal frequency bias around the planted assignment.
+* **Parity constraints**: set `parity_fraction > 0` and `parity_k` to add XOR-like structure. In this package they are expanded directly to CNF, so keep `parity_k` small.
 
 ---
 
